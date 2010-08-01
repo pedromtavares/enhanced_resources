@@ -1,75 +1,60 @@
-Read the full documentation on [our wiki](http://wiki.github.com/sdale/bblue_crm/)
-=================================================================================
+Enhanced Resources
+==================
+A simple Rails 2 plugin that extends classes who inherit from ActiveResource with caching and request limitation features. These were developed specifically for [this application](http://github.com/sdale/bblue_crm) but I decided to modularize the code a bit more and make it available as a plugin.
 
-BatchBook Integration
----------------------
+Features
+--------
 
-We at [UsedCisco.com](http://www.usedcisco.com) use [BatchBook CRM](http://batchblue.com/product-info.html) and build custom tools using their API to fill gaps that our business requires.
+### Caching
+All object collections are cached into your Rails environment's cache store. This way you can browse through your application without having to load object collections from their external source all the time, reducing request time from minutes to miliseconds.
 
-### Technical Notes
+Caching is divided into 2 groups:
+* Lazy: fast, inconsistent. On the first request the data is all cached and never recaches again until you explicitely tell it to (via some rake task or script/console). Smart choice for large collections that rarely change.
+* Eager: slow, consistent. At every request the system checks for a change in the object collection and recaches case there is one. Smart choice for small collections that are always changing.
 
-* Installation and Configuration 
-* Setting Up Users
-* Contacts Management
-* Deals Management
-* Performance
-* Testing
-* Utility Tasks
-* Misc Notes
+To pass a caching option such as lazy or eager on, you can use the caching option:
 
-### Business Notes
+	class Person < ActiveResource::Base
+		def self.find_eager
+			self.find(:all, :caching => 'eager')
+		end
+	end
 
-BatchBooks is an excellent cloud-based CRM service. 
-Although it is growing quickly and already has a nice mature API, every business has specific needs, 
-and we found some gaps that needed to be addressed.
+If you do not want to use caching on a request, you may pass a disable caching option:
 
-The first step for us was to get familiar with the API and create some simple custom reporting tools. 
-This is currently where development stands.
+	class Person < ActiveResource::Base
+		def self.find_without_caching
+			self.find(:all, :disable_caching => true)
+		end
+	end
 
-The second step is going to be to automate some of the workflow tasks for the internal sales team, 
-for example, converting a lead (prospect) to a customer. Using the API, we can have that happen in one step.
+Be sure to have a way to recache lazy data at will. I accomplish this with a rake task such as [this one](http://github.com/sdale/bblue_crm/blob/master/lib/tasks/recache.rake)
 
-The third and most involved task will be integrating our custom quoting web application 
-with BatchBook. BatchBook currently has no way of creating a quote in the system, using an 
-inventory list of our products. We don't want it to: adding too many features will make it 
-overly complex by trying to cater to so many different business, ahem, SalesForce. 
-Instead, we will build the system we need, and use the API to handle integration. 
+### Request Limitation
+Object collection requests are broken down into smaller requests (and bundled up together in the end) to avoid (or at least lessen the rist of) request timeouts.
+Example: if you're asking for 400 objects and set the request limit to 100, 4 requests of 100 objects will be made (0~100, 100~200, 200~300, 300~400) instead of a single one (0~400). In the end all requests are bundled up so there's no difference to the end user.
 
-Check back soon, as we will beginning building stages 2 and three shortly. 
-Most importantly, please offer feedback and feel free to extend it. 
-The critical part though is understanding how we use the system currently, and building on this correctly.
+The request limit default is 100, but you can set your own using the request_limit option:
 
-*******************************
-*Rough business overview*
+	class Person < ActiveResource::Base
+		def self.find_a_bunch
+			self.find(:all, :request_limit => 400)
+		end
+	end
 
-* We use a system of tagging individuals and contacts as either leads (prospects) or customers to indicate
-  status and ownership. 
+If you do not want to use request limitation on a request, you may pass a disable request limitation option:
 
-* Deals are created for either, and when a deal is won, we remove the Lead tag and add the Customer tag.
+	class Person < ActiveResource::Base
+		def self.find_without_limitation
+			self.find(:all, :disable_request_limitation => true)
+		end
+	end
 
-* A task is created to remind our salesperson to follow up with the customer, and we assign ownership of 
-  the customer to the salesperson who closed the deal using an Ownership SuperTag (dropdown select of the 
-  salesperson User).
+Important Notes
+---------------
+Since this was originally designed to deal with the [BatchBook CRM API](http://developer.batchblue.com/), these features will *only* work if the backend server (the one who's supplying objects) implements:
 
-* Each deal gets a SuperTag called dealinfo. In it are a few fields that is used in reporting and filtering
+* Both 'limit' and 'offset' parameters. Required for the request limitation feature.
+* An 'updated_since' parameter. Required for the caching feature (eager caching).
 
-*******************************
-*Current Functionality*
-
-* A more detailed pipeline reporting system that the stock BatchBooks. Using SuperTags to calculate custom 
-  fields and filters. The goal is to easily see each salesperson's deals, current status and a pseudo pipeline.
-
-* To ensure integrity, we also wrote some rake scripts/cron jobs to generate reports for us weekly of 
-  which contacts do not have ownership, or do not have either the Lead or Customer tag.
-
-*******************************
-*To Do*
-
-* Deal close date filtering (dependent on deal SuperTags via the API, waiting ... )
-* Add check for deals without the dealinfo SuperTag to cron jobs (waiting, same as above)
-* Link custom quoting app with BB
-
-*******************************
-### Extend it!
-
-If our business model of dealing with the CRM suits you, awesome, you gain a whole application for free, but if it doesn't, feel free to create your own features and be sure to share it with us!
+Both 'limit' and 'offset' parameters are usually implemented by backend hosts, but 'updated_since' is more specific, so if your host doesn't implement it then it's time to get your hands dirty and modify the Caching module to suit your needs.
