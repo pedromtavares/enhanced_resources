@@ -3,7 +3,7 @@ Enhanced Resources
 A simple Rails 2 plugin that extends classes who inherit from ActiveResource with caching and request limitation features. These were developed specifically for [this application](http://github.com/sdale/bblue_crm) but I decided to modularize the code a bit more and make it available as a plugin.
 
 Features
----------------------
+--------
 
 ### Caching
 All object collections are cached into your Rails environment's cache store. This way you can browse through your application without having to load object collections from their external source all the time, reducing request time from minutes to miliseconds.
@@ -14,19 +14,19 @@ Caching is divided into 2 groups:
 
 To pass a caching option such as lazy or eager on, you can use the caching option:
 
-class Person < ActiveResource::Base
-	def self.find_eager
-		self.find(:all, :caching => 'eager')
+	class Person < ActiveResource::Base
+		def self.find_eager
+			self.find(:all, :caching => 'eager')
+		end
 	end
-end
 
 If you do not want to use caching on a request, you may pass a disable caching option:
 
-class Person < ActiveResource::Base
-	def self.find_without_caching
-		self.find(:all, :disable_caching => true)
+	class Person < ActiveResource::Base
+		def self.find_without_caching
+			self.find(:all, :disable_caching => true)
+		end
 	end
-end
 
 Be sure to have a way to recache lazy data at will. I accomplish this with a rake task such as [this one](http://github.com/sdale/bblue_crm/blob/master/lib/tasks/recache.rake)
 
@@ -36,19 +36,19 @@ Example: if you're asking for 400 objects and set the request limit to 100, 4 re
 
 The request limit default is 100, but you can set your own using the request_limit option:
 
-class Person < ActiveResource::Base
-	def self.find_a_bunch
-		self.find(:all, :request_limit => 400)
+	class Person < ActiveResource::Base
+		def self.find_a_bunch
+			self.find(:all, :request_limit => 400)
+		end
 	end
-end
 
 If you do not want to use request limitation on a request, you may pass a disable request limitation option:
 
-class Person < ActiveResource::Base
-	def self.find_without_limitation
-		self.find(:all, :disable_request_limitation => true)
+	class Person < ActiveResource::Base
+		def self.find_without_limitation
+			self.find(:all, :disable_request_limitation => true)
+		end
 	end
-end
 
 Important Notes
 ---------------
